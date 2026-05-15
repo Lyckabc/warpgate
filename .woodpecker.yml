@@ -6,8 +6,7 @@ labels:
 
 volumes:
   - name: artifacts
-    claim:
-      claimName: woodpecker-artifacts
+    claim: woodpecker-artifacts
 
 steps:
   - name: build-warpgate
