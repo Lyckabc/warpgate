@@ -1,5 +1,6 @@
 when:
   branch: fix-ssh-sso-auth
+  event: [push, manual]
 
 labels:
   platform: linux/amd64
@@ -7,8 +8,6 @@ labels:
 steps:
   - name: build-warpgate
     image: rust:1.94.1-bullseye
-    volumes:
-      - /tmp/woodpecker-artifacts:/artifacts
     commands:
       - apt-get update
       - curl -fsSL https://deb.nodesource.com/setup_24.x | bash -
@@ -36,21 +35,17 @@ steps:
 
   - name: save-artifact
     image: alpine:3.18
-    volumes:
-      - /tmp/woodpecker-artifacts:/artifacts
     commands:
-      - apk add --no-cache tar gzip coreutils
+      - apk add --no-cache tar gzip
       - cd target/release
-      - TIMESTAMP=$(date +%Y%m%d-%H%M%S)
-      - ARTIFACT_DIR="/artifacts/warpgate/${CI_COMMIT_BRANCH}/${CI_COMMIT_SHA:0:8}-${TIMESTAMP}"
-      - mkdir -p "$ARTIFACT_DIR"
-      - cp warpgate "$ARTIFACT_DIR/warpgate"
-      - tar czf "$ARTIFACT_DIR/warpgate.tar.gz" warpgate
-      - ln -sf "$ARTIFACT_DIR/warpgate" /artifacts/warpgate/latest
-      - echo "=== ARTIFACT SAVED ==="
-      - echo "Location $ARTIFACT_DIR/warpgate"
-      - ls -lh "$ARTIFACT_DIR"
-      - sha256sum "$ARTIFACT_DIR/warpgate"
-      - sha256sum "$ARTIFACT_DIR/warpgate.tar.gz"
-      - echo "=== DOWNLOAD COMMAND ==="
-      - echo "kubectl -n metaflow cp woodpecker-artifacts:/warpgate/latest ./warpgate-latest"
+      - tar czf /tmp/warpgate-${CI_COMMIT_SHA:0:8}.tar.gz warpgate
+      - cp warpgate /tmp/warpgate-binary
+      - echo "=== ARTIFACT INFO ==="
+      - echo "Binary /tmp/warpgate-binary"
+      - echo "Tarball /tmp/warpgate-${CI_COMMIT_SHA:0:8}.tar.gz"
+      - ls -lh /tmp/warpgate-binary
+      - sha256sum /tmp/warpgate-binary
+      - sha256sum /tmp/warpgate-${CI_COMMIT_SHA:0:8}.tar.gz
+      - echo "=== WAITING 600 SECONDS FOR DOWNLOAD ==="
+      - echo "Download with kubectl cp <pod>:/tmp/warpgate-binary ./warpgate"
+      - sh -c 'i=0; while [ $i -lt 600 ]; do echo "Waiting... $i/600"; sleep 10; i=$((i+10)); done'
