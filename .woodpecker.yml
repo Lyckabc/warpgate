@@ -21,12 +21,14 @@ steps:
       - file target/release/warpgate
       - ./target/release/warpgate --version
 
-  - name: package-artifact
+  - name: upload-artifact
     image: alpine:3.18
     commands:
-      - apk add --no-cache tar gzip
+      - apk add --no-cache curl
       - |
-        cd target/release
-        tar czf warpgate-$(date +%Y%m%d-%H%M%S)-${CI_COMMIT_SHA:0:8}.tar.gz warpgate
-        ls -lh warpgate-*.tar.gz
-        echo "Artifact ready for manual download from agent workspace"
+        ARTIFACT_URL="https://artifact-keeper.toji.homes/api/v1/artifacts/warpgate/warpgate-${CI_COMMIT_SHA:0:8}"
+        echo "Uploading to artifact-keeper..."
+        curl -f -X PUT -H "Content-Type: application/octet-stream" \
+          --data-binary @target/release/warpgate \
+          "${ARTIFACT_URL}" || echo "Upload failed, continuing..."
+        echo "Binary size: $(stat -c%s target/release/warpgate) bytes"
