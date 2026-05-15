@@ -4,16 +4,11 @@ when:
 labels:
   platform: linux/amd64
 
-volumes:
-  - name: artifacts
-    claim: woodpecker-artifacts
-
 steps:
   - name: build-warpgate
     image: rust:1.94.1-bullseye
     volumes:
-      - name: artifacts
-        path: /artifacts
+      - /tmp/woodpecker-artifacts:/artifacts
     commands:
       - apt-get update
       - curl -fsSL https://deb.nodesource.com/setup_24.x | bash -
@@ -42,8 +37,7 @@ steps:
   - name: save-artifact
     image: alpine:3.18
     volumes:
-      - name: artifacts
-        path: /artifacts
+      - /tmp/woodpecker-artifacts:/artifacts
     commands:
       - apk add --no-cache tar gzip coreutils
       - cd target/release
