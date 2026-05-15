@@ -25,13 +25,12 @@ steps:
     image: alpine:3.18
     commands:
       - apk add --no-cache tar gzip
-      - |
-        cd target/release
-        tar czf /tmp/warpgate-${CI_COMMIT_SHA:0:8}.tar.gz warpgate
-        echo "=== ARTIFACT INFO ==="
-        echo "Filename: warpgate-${CI_COMMIT_SHA:0:8}.tar.gz"
-        echo "Size: $(stat -c%s /tmp/warpgate-${CI_COMMIT_SHA:0:8}.tar.gz) bytes"
-        echo "SHA256: $(sha256sum /tmp/warpgate-${CI_COMMIT_SHA:0:8}.tar.gz | cut -d' ' -f1)"
-        echo "=== DOWNLOAD COMMAND ==="
-        echo "kubectl cp <pod-name>:/tmp/warpgate-${CI_COMMIT_SHA:0:8}.tar.gz ./warpgate.tar.gz"
-        sleep 300
+      - cd target/release
+      - tar czf /tmp/warpgate-${CI_COMMIT_SHA:0:8}.tar.gz warpgate
+      - cp warpgate /tmp/warpgate-binary
+      - echo "=== ARTIFACT INFO ==="
+      - echo "Filename warpgate-${CI_COMMIT_SHA:0:8}.tar.gz"
+      - stat -c%s /tmp/warpgate-${CI_COMMIT_SHA:0:8}.tar.gz
+      - sha256sum /tmp/warpgate-${CI_COMMIT_SHA:0:8}.tar.gz
+      - echo "=== WAITING 600 SECONDS FOR DOWNLOAD ==="
+      - sleep 600
