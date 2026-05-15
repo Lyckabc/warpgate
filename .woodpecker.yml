@@ -1,0 +1,32 @@
+when:
+  branch: fix-ssh-sso-auth
+
+labels:
+  platform: linux/amd64
+
+steps:
+  - name: build-warpgate
+    image: rust:1.94.1-bullseye
+    commands:
+      - apt-get update
+      - curl -fsSL https://deb.nodesource.com/setup_24.x | bash -
+      - apt-get install -y --no-install-recommends ca-certificates-java nodejs openjdk-17-jdk
+      - cargo install --locked just@1.4.0
+      - export SOURCE_DATE_EPOCH=0
+      - just npm ci
+      - just openapi
+      - just npm run build
+      - cargo build --features mysql,postgres --release
+      - ls -lh target/release/warpgate
+      - file target/release/warpgate
+      - ./target/release/warpgate --version
+
+  - name: publish-artifact
+    image: alpine:3.18
+    commands:
+      - apk add --no-cache curl
+      - |
+        ARTIFACT_NAME="warpgate-0.23.4-patched-$(date +%Y%m%d-%H%M%S)"
+        cp target/release/warpgate "${ARTIFACT_NAME}"
+        echo "Built artifact: ${ARTIFACT_NAME}"
+        ls -lh "${ARTIFACT_NAME}"
