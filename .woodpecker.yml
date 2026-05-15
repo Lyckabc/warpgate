@@ -21,14 +21,17 @@ steps:
       - file target/release/warpgate
       - ./target/release/warpgate --help || echo "Binary is valid (no --version flag)"
 
-  - name: upload-artifact
+  - name: save-artifact
     image: alpine:3.18
     commands:
-      - apk add --no-cache curl
+      - apk add --no-cache tar gzip
       - |
-        ARTIFACT_URL="https://artifact-keeper.toji.homes/api/v1/artifacts/warpgate/warpgate-${CI_COMMIT_SHA:0:8}"
-        echo "Uploading to artifact-keeper..."
-        curl -f -X PUT -H "Content-Type: application/octet-stream" \
-          --data-binary @target/release/warpgate \
-          "${ARTIFACT_URL}" || echo "Upload failed, continuing..."
-        echo "Binary size: $(stat -c%s target/release/warpgate) bytes"
+        cd target/release
+        tar czf /tmp/warpgate-${CI_COMMIT_SHA:0:8}.tar.gz warpgate
+        echo "=== ARTIFACT INFO ==="
+        echo "Filename: warpgate-${CI_COMMIT_SHA:0:8}.tar.gz"
+        echo "Size: $(stat -c%s /tmp/warpgate-${CI_COMMIT_SHA:0:8}.tar.gz) bytes"
+        echo "SHA256: $(sha256sum /tmp/warpgate-${CI_COMMIT_SHA:0:8}.tar.gz | cut -d' ' -f1)"
+        echo "=== DOWNLOAD COMMAND ==="
+        echo "kubectl cp <pod-name>:/tmp/warpgate-${CI_COMMIT_SHA:0:8}.tar.gz ./warpgate.tar.gz"
+        sleep 300
