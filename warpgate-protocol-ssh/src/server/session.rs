@@ -264,6 +264,7 @@ impl ServerSession {
                     &[
                         CredentialKind::Password,
                         CredentialKind::PublicKey,
+                        CredentialKind::Sso,
                         CredentialKind::Totp,
                         CredentialKind::WebUserApproval,
                     ],
