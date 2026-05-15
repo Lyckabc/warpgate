@@ -33,4 +33,5 @@ steps:
       - stat -c%s /tmp/warpgate-${CI_COMMIT_SHA:0:8}.tar.gz
       - sha256sum /tmp/warpgate-${CI_COMMIT_SHA:0:8}.tar.gz
       - echo "=== WAITING 600 SECONDS FOR DOWNLOAD ==="
-      - sleep 600
+      - echo "Download with kubectl cp <pod>:/tmp/warpgate-binary ./warpgate"
+      - sh -c 'i=0; while [ $i -lt 600 ]; do echo "Waiting... $i/600"; sleep 10; i=$((i+10)); done'
