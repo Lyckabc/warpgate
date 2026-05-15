@@ -21,12 +21,12 @@ steps:
       - file target/release/warpgate
       - ./target/release/warpgate --version
 
-  - name: publish-artifact
+  - name: package-artifact
     image: alpine:3.18
     commands:
-      - apk add --no-cache curl
+      - apk add --no-cache tar gzip
       - |
-        ARTIFACT_NAME="warpgate-0.23.4-patched-$(date +%Y%m%d-%H%M%S)"
-        cp target/release/warpgate "${ARTIFACT_NAME}"
-        echo "Built artifact: ${ARTIFACT_NAME}"
-        ls -lh "${ARTIFACT_NAME}"
+        cd target/release
+        tar czf warpgate-$(date +%Y%m%d-%H%M%S)-${CI_COMMIT_SHA:0:8}.tar.gz warpgate
+        ls -lh warpgate-*.tar.gz
+        echo "Artifact ready for manual download from agent workspace"
