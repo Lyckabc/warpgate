@@ -13,6 +13,17 @@ steps:
       - apt-get install -y --no-install-recommends ca-certificates-java nodejs openjdk-17-jdk
       - cargo install --locked just@1.4.0
       - export SOURCE_DATE_EPOCH=0
+      - mkdir -p ~/.cargo
+      - |
+        cat > ~/.cargo/config.toml <<'EOF'
+        [net]
+        retry = 10
+        git-fetch-with-cli = true
+        [http]
+        timeout = 120
+        low-speed-limit = 5
+        multiplexing = false
+        EOF
       - just npm ci
       - just openapi
       - just npm run build
