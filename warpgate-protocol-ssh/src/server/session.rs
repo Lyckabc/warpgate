@@ -1512,7 +1512,7 @@ impl ServerSession {
             return Ok(russh::server::Auth::reject());
         }
 
-        let cred;
+        let mut cred = None;
         match &mut self.keyboard_interactive_state {
             KeyboardInteractiveState::None => {
                 cred = None;
@@ -1558,10 +1558,7 @@ impl ServerSession {
                     
                     if cred.is_none() {
                         tracing::warn!("SSO token validation failed for all providers");
-                        cred = None;
                     }
-                } else {
-                    cred = None;
                 }
             }
         }
