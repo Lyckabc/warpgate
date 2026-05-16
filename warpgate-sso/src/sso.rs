@@ -297,7 +297,7 @@ impl SsoClient {
         
         let access_token = openidconnect::AccessToken::new(access_token);
         let user_info_req = client.user_info(access_token, None)
-            .ok_or(SsoError::Verification("Failed to create userinfo request".to_string()))?;
+            .map_err(|err| SsoError::Verification(format!("Failed to create userinfo request: {err:?}")))?;
         
         user_info_req
             .request_async(&self.http_client)
