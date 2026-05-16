@@ -69,6 +69,7 @@ enum KeyboardInteractiveState {
     None,
     OtpRequested,
     WebAuthRequested(broadcast::Receiver<AuthResult>),
+    SsoRequested,
 }
 
 struct CachedSuccessfulTicketAuth {
@@ -1524,6 +1525,45 @@ impl ServerSession {
                 let _ = event.recv().await;
                 // the auth state has been updated by now
             }
+            KeyboardInteractiveState::SsoRequested => {
+                if let Some(token) = response {
+                    let config = self.services.config.lock().await;
+                    let sso_providers = &config.store.sso_providers;
+                    
+                    for provider_config in sso_providers {
+                        match warpgate_sso::SsoClient::new(provider_config.provider.clone()) {
+                            Ok(sso_client) => {
+                                match sso_client.verify_token(token.expose_secret().clone()).await {
+                                    Ok(userinfo) => {
+                                        if let Some(email) = userinfo.email() {
+                                            cred = Some(AuthCredential::Sso {
+                                                provider: provider_config.name.clone(),
+                                                email: email.as_str().to_string(),
+                                            });
+                                            break;
+                                        }
+                                    }
+                                    Err(e) => {
+                                        tracing::debug!("SSO token validation failed for provider {}: {:?}", provider_config.name, e);
+                                        continue;
+                                    }
+                                }
+                            }
+                            Err(e) => {
+                                tracing::error!("Failed to create SSO client for provider {}: {:?}", provider_config.name, e);
+                                continue;
+                            }
+                        }
+                    }
+                    
+                    if cred.is_none() {
+                        tracing::warn!("SSO token validation failed for all providers");
+                        cred = None;
+                    }
+                } else {
+                    cred = None;
+                }
+            }
         }
 
         self.keyboard_interactive_state = KeyboardInteractiveState::None;
@@ -1532,7 +1572,14 @@ impl ServerSession {
             Ok(AuthResult::Accepted { .. }) => russh::server::Auth::Accept,
             Ok(AuthResult::Rejected) => russh::server::Auth::reject(),
             Ok(AuthResult::Need(kinds)) => {
-                if kinds.contains(&CredentialKind::Totp) {
+                if kinds.contains(&CredentialKind::Sso) {
+                    self.keyboard_interactive_state = KeyboardInteractiveState::SsoRequested;
+                    russh::server::Auth::Partial {
+                        name: Cow::Borrowed("SSO Authentication"),
+                        instructions: Cow::Borrowed("Please provide your OAuth2 access token from ZITADEL"),
+                        prompts: Cow::Owned(vec![(Cow::Borrowed("Access Token: "), false)]),
+                    }
+                } else if kinds.contains(&CredentialKind::Totp) {
                     self.keyboard_interactive_state = KeyboardInteractiveState::OtpRequested;
                     russh::server::Auth::Partial {
                         name: Cow::Borrowed("Two-factor authentication"),

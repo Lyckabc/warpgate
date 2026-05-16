@@ -291,4 +291,17 @@ impl SsoClient {
         req = req.set_post_logout_redirect_uri(PostLogoutRedirectUrl::from_url(redirect_url));
         Ok(req.http_get_url())
     }
+
+    pub async fn verify_token(&self, access_token: String) -> Result<UserInfoClaims<WarpgateClaims, CoreGenderClaim>, SsoError> {
+        let client: WarpgateClient = make_client(&self.config, &self.http_client).await?;
+        
+        let access_token = openidconnect::AccessToken::new(access_token);
+        let user_info_req = client.user_info(access_token, None)
+            .ok_or(SsoError::Verification("Failed to create userinfo request".to_string()))?;
+        
+        user_info_req
+            .request_async(&self.http_client)
+            .await
+            .map_err(|err| SsoError::Verification(format!("UserInfo request failed: {err:?}")))
+    }
 }
